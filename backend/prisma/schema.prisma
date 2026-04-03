@@ -1,0 +1,658 @@
+// This is your Prisma schema file,
+
+// ============================================================
+//  CAMPUS CONNECT — Prisma Schema
+//  Database: PostgreSQL
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+//  ENUMS
+// ============================================================
+
+enum UserRole {
+  student
+  organizer
+  college_admin
+  super_admin
+
+  @@map("user_role")
+}
+
+enum OrganizerType {
+  club
+  department
+  faculty
+  admin
+
+  @@map("organizer_type")
+}
+
+enum EventCategory {
+  cultural
+  technical
+  sports
+  academic
+  workshop
+  hackathon
+  other
+
+  @@map("event_category")
+}
+
+enum EventType {
+  incollege
+  intercollege
+
+  @@map("event_type")
+}
+
+enum EventMode {
+  offline
+  online
+  hybrid
+
+  @@map("event_mode")
+}
+
+enum EventStatus {
+  draft
+  pending
+  reviewing
+  revision
+  approved
+  live
+  completed
+  cancelled
+  rejected
+
+  @@map("event_status")
+}
+
+enum RegistrationStatus {
+  confirmed
+  waitlisted
+  cancelled
+  attended
+
+  @@map("registration_status")
+}
+
+enum TeamStatus {
+  pending
+  confirmed
+  cancelled
+
+  @@map("team_status")
+}
+
+enum InviteStatus {
+  pending
+  accepted
+  declined
+
+  @@map("invite_status")
+}
+
+enum ScoringType {
+  points
+  time
+  rank
+  pass_fail
+
+  @@map("scoring_type")
+}
+
+enum ParticipantType {
+  student
+  team
+
+  @@map("participant_type")
+}
+
+enum NotificationType {
+  event_submitted
+  event_approved
+  event_rejected
+  event_revision
+  event_cancelled
+  event_reminder
+  registration_confirmed
+  waitlist_promoted
+  team_invite
+  leaderboard_updated
+  certificate_ready
+  announcement
+  system
+
+  @@map("notification_type")
+}
+
+enum SpeakerRole {
+  speaker
+  judge
+  mentor
+  guest
+
+  @@map("speaker_role")
+}
+
+enum VerificationMethod {
+  email_otp
+  id_card
+  manual
+
+  @@map("verification_method")
+}
+
+enum IdCardStatus {
+  pending
+  approved
+  rejected
+
+  @@map("id_card_status")
+}
+
+// ============================================================
+//  TABLE 1: colleges
+// ============================================================
+
+model College {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String   @db.VarChar(200)
+  short_name   String?  @unique @db.VarChar(50)
+  email_domain String   @unique @db.VarChar(100)
+  logo_url     String?
+  city         String?  @db.VarChar(100)
+  state        String?  @db.VarChar(100)
+  website_url  String?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  // Relations
+  users                 User[]
+  organizers            Organizer[]
+  events                Event[]
+  id_card_verifications IdCardVerification[]
+
+  @@map("colleges")
+}
+
+// ============================================================
+//  TABLE 2: users and RefreshToken
+// ============================================================
+
+model User {
+  id                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name           String              @db.VarChar(150)
+  email               String              @unique @db.VarChar(255)
+  college_email       String?             @unique @db.VarChar(255)
+  password_hash       String
+  role                UserRole            @default(student)
+  college_id          String?             @db.Uuid
+  roll_number         String?             @db.VarChar(50)
+  branch              String?             @db.VarChar(100)
+  year_of_study       Int?
+  avatar_url          String?
+  is_verified         Boolean             @default(false)
+  verification_method VerificationMethod?
+  points              Int                 @default(0)
+  is_active           Boolean             @default(true)
+  last_login          DateTime?
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @default(now()) @updatedAt
+
+  // Relations
+  refresh_tokens        RefreshToken[]
+  college               College?             @relation(fields: [college_id], references: [id])
+  organizer             Organizer?
+  registrations         Registration[]
+  team_memberships      TeamMember[]
+  teams_led             Team[]               @relation("TeamLeader")
+  notifications         Notification[]
+  follows               Follow[]
+  feedback              Feedback[]
+  gallery_uploads       EventGallery[]
+  student_badges        StudentBadge[]
+  otp_verifications     OtpVerification[]
+  id_card_verifications IdCardVerification[] @relation("StudentIdCards")
+  id_cards_reviewed     IdCardVerification[] @relation("ReviewedBy")
+  manual_verifications  IdCardVerification[] @relation("ManualVerifier")
+
+  @@map("users")
+}
+
+// ============================================================
+// ============================================================
+
+model RefreshToken {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String   @db.Uuid
+  token_hash             String   @unique
+  expires_at             DateTime
+  revoked_at             DateTime?
+  replaced_by_token_hash String?
+  ip_address             String?  @db.VarChar(64)
+  user_agent             String?  @db.VarChar(255)
+  created_at             DateTime @default(now())
+  updated_at             DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("refresh_tokens")
+}
+
+// ============================================================
+//  TABLE 3: otp_verifications
+// ============================================================
+
+model OtpVerification {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String   @db.Uuid
+  college_email String   @db.VarChar(255)
+  otp_hash      String
+  expires_at    DateTime
+  attempts      Int      @default(0)
+  verified      Boolean  @default(false)
+  created_at    DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("otp_verifications")
+}
+
+// ============================================================
+//  TABLE 4: id_card_verifications
+// ============================================================
+
+model IdCardVerification {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id     String       @db.Uuid
+  college_id     String       @db.Uuid
+  id_card_url    String
+  status         IdCardStatus @default(pending)
+  reviewed_by    String?      @db.Uuid
+  reviewed_at    DateTime?
+  rejection_note String?
+  submitted_at   DateTime     @default(now())
+
+  manual_verified_by String? @db.Uuid
+  manualVerifier     User?   @relation("ManualVerifier", fields: [manual_verified_by], references: [id], onDelete: SetNull)
+
+  // Relations
+  student  User    @relation("StudentIdCards", fields: [student_id], references: [id], onDelete: Cascade)
+  college  College @relation(fields: [college_id], references: [id], onDelete: Cascade)
+  reviewer User?   @relation("ReviewedBy", fields: [reviewed_by], references: [id], onDelete: SetNull)
+
+  @@unique([student_id, college_id])
+  @@map("id_card_verifications")
+}
+
+// ============================================================
+//  TABLE 5: organizers
+// ============================================================
+
+model Organizer {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String        @unique @db.Uuid
+  college_id     String        @db.Uuid
+  org_name       String        @db.VarChar(150)
+  org_type       OrganizerType @default(club)
+  logo_url       String?
+  description    String?
+  follower_count Int           @default(0)
+  is_active      Boolean       @default(true)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @default(now()) @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  college College  @relation(fields: [college_id], references: [id], onDelete: Cascade)
+  events  Event[]
+  follows Follow[]
+
+  @@map("organizers")
+}
+
+// ============================================================
+//  TABLE 6: events
+// ============================================================
+
+model Event {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizer_id          String        @db.Uuid
+  college_id            String        @db.Uuid
+  title                 String        @db.VarChar(200)
+  short_description     String        @db.VarChar(300)
+  long_description      String
+  category              EventCategory
+  event_type            EventType     @default(incollege)
+  mode                  EventMode     @default(offline)
+  start_datetime        DateTime
+  end_datetime          DateTime
+  registration_deadline DateTime
+  venue_name            String?       @db.VarChar(200)
+  venue_address         String?
+  online_link           String?
+  max_capacity          Int
+  registered_count      Int           @default(0)
+  is_team_event         Boolean       @default(false)
+  min_team_size         Int?
+  max_team_size         Int?
+  is_paid               Boolean       @default(false)
+  entry_fee             Decimal?      @db.Decimal(10, 2)
+  currency              String        @default("INR") @db.VarChar(10)
+  waitlist_enabled      Boolean       @default(false)
+  has_multi_rounds      Boolean       @default(false)
+  banner_url            String?
+  poster_url            String?
+  document_url          String?
+  tags                  String[]
+  status                EventStatus   @default(draft)
+  rejection_reason      String?
+  is_featured           Boolean       @default(false)
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @default(now()) @updatedAt
+
+  // Relations
+  organizer           Organizer          @relation(fields: [organizer_id], references: [id], onDelete: Cascade)
+  college             College            @relation(fields: [college_id], references: [id], onDelete: Cascade)
+  event_schedule      EventSchedule[]
+  event_speakers      EventSpeaker[]
+  registrations       Registration[]
+  teams               Team[]
+  rounds              Round[]
+  leaderboard_entries LeaderboardEntry[]
+  notifications       Notification[]
+  feedback            Feedback[]
+  event_gallery       EventGallery[]
+
+  @@map("events")
+}
+
+// ============================================================
+//  TABLE 7: event_schedule
+// ============================================================
+
+model EventSchedule {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id    String   @db.Uuid
+  day_number  Int
+  title       String   @db.VarChar(200)
+  start_time  DateTime @db.Time()
+  end_time    DateTime @db.Time()
+  description String?
+  location    String?  @db.VarChar(200)
+
+  // Relations
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@map("event_schedule")
+}
+
+// ============================================================
+//  TABLE 8: event_speakers
+// ============================================================
+
+model EventSpeaker {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id    String      @db.Uuid
+  name        String      @db.VarChar(150)
+  designation String?     @db.VarChar(200)
+  bio         String?
+  photo_url   String?
+  role        SpeakerRole @default(speaker)
+
+  // Relations
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@map("event_speakers")
+}
+
+// ============================================================
+//  TABLE 9: teams
+// ============================================================
+
+model Team {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id   String     @db.Uuid
+  leader_id  String     @db.Uuid
+  team_name  String     @db.VarChar(100)
+  status     TeamStatus @default(pending)
+  created_at DateTime   @default(now())
+
+  // Relations
+  event         Event          @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  leader        User           @relation("TeamLeader", fields: [leader_id], references: [id], onDelete: Cascade)
+  team_members  TeamMember[]
+  registrations Registration[]
+
+  @@unique([event_id, team_name])
+  @@map("teams")
+}
+
+// ============================================================
+//  TABLE 10: registrations
+// ============================================================
+
+model Registration {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id          String             @db.Uuid
+  student_id        String             @db.Uuid
+  team_id           String?            @db.Uuid
+  status            RegistrationStatus @default(confirmed)
+  waitlist_position Int?
+  qr_code           String             @unique
+  payment_id        String?            @db.VarChar(200)
+  amount_paid       Decimal?           @db.Decimal(10, 2)
+  checked_in        Boolean            @default(false)
+  checked_in_at     DateTime?
+  certificate_url   String?
+  registered_at     DateTime           @default(now())
+  cancelled_at      DateTime?
+
+  // Relations
+  event   Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  team    Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
+
+  @@unique([event_id, student_id])
+  @@map("registrations")
+}
+
+// ============================================================
+//  TABLE 11: team_members
+// ============================================================
+
+model TeamMember {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  team_id       String       @db.Uuid
+  student_id    String       @db.Uuid
+  is_leader     Boolean      @default(false)
+  invite_status InviteStatus @default(pending)
+  joined_at     DateTime?
+
+  // Relations
+  team    Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  student User @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([team_id, student_id])
+  @@map("team_members")
+}
+
+// ============================================================
+//  TABLE 12: rounds
+// ============================================================
+
+model Round {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id        String      @db.Uuid
+  round_number    Int
+  round_name      String      @db.VarChar(150)
+  description     String?
+  scoring_type    ScoringType @default(points)
+  scheduled_at    DateTime?
+  is_published    Boolean     @default(false)
+  tiebreaker_rule String?
+  created_at      DateTime    @default(now())
+
+  // Relations
+  event               Event              @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  leaderboard_entries LeaderboardEntry[]
+
+  @@unique([event_id, round_number])
+  @@map("rounds")
+}
+
+// ============================================================
+//  TABLE 13: leaderboard_entries
+// ============================================================
+
+model LeaderboardEntry {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  round_id         String          @db.Uuid
+  event_id         String          @db.Uuid
+  participant_id   String          @db.Uuid
+  participant_type ParticipantType
+  score            Decimal?        @db.Decimal(10, 2)
+  time_taken       Int?
+  rank_in_round    Int?
+  is_eliminated    Boolean         @default(false)
+  remarks          String?
+  submitted_at     DateTime        @default(now())
+
+  // Relations
+  round Round @relation(fields: [round_id], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@unique([round_id, participant_id, participant_type])
+  @@map("leaderboard_entries")
+}
+
+// ============================================================
+//  TABLE 14: notifications
+// ============================================================
+
+model Notification {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String           @db.Uuid
+  type             NotificationType
+  title            String           @db.VarChar(200)
+  message          String
+  related_event_id String?          @db.Uuid
+  is_read          Boolean          @default(false)
+  created_at       DateTime         @default(now())
+
+  // Relations
+  user          User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  related_event Event? @relation(fields: [related_event_id], references: [id], onDelete: SetNull)
+
+  @@map("notifications")
+}
+
+// ============================================================
+//  TABLE 15: follows
+// ============================================================
+
+model Follow {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id   String   @db.Uuid
+  organizer_id String   @db.Uuid
+  followed_at  DateTime @default(now())
+
+  // Relations
+  student   User      @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  organizer Organizer @relation(fields: [organizer_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, organizer_id])
+  @@map("follows")
+}
+
+// ============================================================
+//  TABLE 16: feedback
+// ============================================================
+
+model Feedback {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id            String   @db.Uuid
+  student_id          String   @db.Uuid
+  rating              Int
+  organization_rating Int?
+  content_rating      Int?
+  comments            String?
+  submitted_at        DateTime @default(now())
+
+  // Relations
+  event   Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  student User  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@unique([event_id, student_id])
+  @@map("feedback")
+}
+
+// ============================================================
+//  TABLE 17: event_gallery
+// ============================================================
+
+model EventGallery {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_id    String   @db.Uuid
+  uploaded_by String   @db.Uuid
+  photo_url   String
+  caption     String?  @db.VarChar(300)
+  uploaded_at DateTime @default(now())
+
+  // Relations
+  event    Event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  uploader User  @relation(fields: [uploaded_by], references: [id], onDelete: Cascade)
+
+  @@map("event_gallery")
+}
+
+// ============================================================
+//  TABLE 18: badges
+// ============================================================
+
+model Badge {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @unique @db.VarChar(100)
+  icon_url        String
+  description     String
+  points_required Int?
+  created_at      DateTime @default(now())
+
+  // Relations
+  student_badges StudentBadge[]
+
+  @@map("badges")
+}
+
+// ============================================================
+//  TABLE 19: student_badges
+// ============================================================
+
+model StudentBadge {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id String   @db.Uuid
+  badge_id   String   @db.Uuid
+  earned_at  DateTime @default(now())
+
+  // Relations
+  student User  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  badge   Badge @relation(fields: [badge_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, badge_id])
+  @@map("student_badges")
+}
