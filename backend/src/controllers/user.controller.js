@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { trim, trimLower, isInRange } from "../utils/sanitize.js"
 import bcrypt from "bcrypt"
 
+// it will extract the domain name of college email
 const getDomainFromEmail = (value) => {
   if (!value) return null
   const atIndex = value.lastIndexOf("@")
@@ -12,6 +13,7 @@ const getDomainFromEmail = (value) => {
   return value.slice(atIndex + 1).toLowerCase()
 }
 
+// it will register the student on the platform
 const createUser = asyncHandler(async (req, res) => {
   const fullName = trim(req.body.fullName)
   const email = trimLower(req.body.email)
@@ -24,6 +26,7 @@ const createUser = asyncHandler(async (req, res) => {
   const yearOfStudy = req.body.yearOfStudy
   const avatarUrl = typeof req.body.avatarUrl === "string" ? trim(req.body.avatarUrl) : null
 
+  // Neccessary inputs are required
   if (!fullName || !email || !password || !collegeId) {
     throw new ApiError(400, "Necessary fields are required")
   }
@@ -36,6 +39,7 @@ const createUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Student must have valid rollNumber, branch, yearOfStudy")
   }
 
+  // checking if given college is present and active in our db
   const college = await prisma.college.findFirst({
     where: {
       id: collegeId,
@@ -47,6 +51,7 @@ const createUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "College not found")
   }
 
+  // checking if college email is valid and matches to the college
   if (collegeEmail) {
     const emailDomain = getDomainFromEmail(collegeEmail)
     if (!emailDomain) {
@@ -58,6 +63,7 @@ const createUser = asyncHandler(async (req, res) => {
     }
   }
 
+  // checking if the user already registered on our platform(By email)
   const existingUser = await prisma.user.findUnique({
     where: { email },
   })
@@ -85,6 +91,7 @@ const createUser = asyncHandler(async (req, res) => {
     },
   })
 
+  // returning user without password
   const { password_hash, ...safeUser } = user
 
   return res.status(201).json(

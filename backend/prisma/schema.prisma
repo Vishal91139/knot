@@ -161,6 +161,14 @@ enum IdCardStatus {
   @@map("id_card_status")
 }
 
+enum AdminRequestStatus {
+  pending
+  approved
+  rejected
+
+  @@map("admin_request_status")
+}
+
 // ============================================================
 //  TABLE 1: colleges
 // ============================================================
@@ -183,6 +191,7 @@ model College {
   organizers            Organizer[]
   events                Event[]
   id_card_verifications IdCardVerification[]
+  admin_requests        CollegeAdminRequest[]
 
   @@map("colleges")
 }
@@ -212,21 +221,22 @@ model User {
   updated_at          DateTime            @default(now()) @updatedAt
 
   // Relations
-  refresh_tokens        RefreshToken[]
-  college               College?             @relation(fields: [college_id], references: [id])
-  organizer             Organizer?
-  registrations         Registration[]
-  team_memberships      TeamMember[]
-  teams_led             Team[]               @relation("TeamLeader")
-  notifications         Notification[]
-  follows               Follow[]
-  feedback              Feedback[]
-  gallery_uploads       EventGallery[]
-  student_badges        StudentBadge[]
-  otp_verifications     OtpVerification[]
-  id_card_verifications IdCardVerification[] @relation("StudentIdCards")
-  id_cards_reviewed     IdCardVerification[] @relation("ReviewedBy")
-  manual_verifications  IdCardVerification[] @relation("ManualVerifier")
+  refresh_tokens          RefreshToken[]
+  college                 College?              @relation(fields: [college_id], references: [id])
+  organizer               Organizer?
+  registrations           Registration[]
+  team_memberships        TeamMember[]
+  teams_led               Team[]                @relation("TeamLeader")
+  notifications           Notification[]
+  follows                 Follow[]
+  feedback                Feedback[]
+  gallery_uploads         EventGallery[]
+  student_badges          StudentBadge[]
+  otp_verifications       OtpVerification[]
+  id_card_verifications   IdCardVerification[]  @relation("StudentIdCards")
+  id_cards_reviewed       IdCardVerification[]  @relation("ReviewedBy")
+  manual_verifications    IdCardVerification[]  @relation("ManualVerifier")
+  reviewed_admin_requests CollegeAdminRequest[] @relation("ReviewedAdminRequests")
 
   @@map("users")
 }
@@ -655,4 +665,32 @@ model StudentBadge {
 
   @@unique([student_id, badge_id])
   @@map("student_badges")
+}
+
+// ============================================================
+//  TABLE 20: college_admin_requests
+// ============================================================
+
+model CollegeAdminRequest {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name          String             @db.VarChar(150)
+  email              String             @db.VarChar(255)
+  college_id         String             @db.Uuid
+  phone              String?            @db.VarChar(20)
+  designation        String?            @db.VarChar(120)
+  reason             String?
+  status             AdminRequestStatus @default(pending)
+  rejection_reason   String?
+  reviewed_by        String?            @db.Uuid
+  reviewed_at        DateTime?
+  created_at         DateTime           @default(now())
+  updated_at         DateTime           @default(now()) @updatedAt
+
+  college            College            @relation(fields: [college_id], references: [id], onDelete: Cascade)
+  reviewer           User?              @relation("ReviewedAdminRequests", fields: [reviewed_by], references: [id], onDelete: SetNull)
+
+  @@unique([email, college_id, status])
+  @@index([status])
+  @@index([college_id])
+  @@map("college_admin_requests")
 }

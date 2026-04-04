@@ -1,10 +1,15 @@
-import prisma from "../config/prisma";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asyncHandler";
+import prisma from "../config/prisma.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
+// it return all active colleges
 const getAllCollege = asyncHandler(async(req, res) => {
-    const colleges = await prisma.college.findMany();
+    const colleges = await prisma.college.findMany({
+        where: {
+            is_active : true
+        }
+    });
 
     if (colleges.length === 0) {
         throw new ApiError(404, "No colleges found");
@@ -15,6 +20,7 @@ const getAllCollege = asyncHandler(async(req, res) => {
     )
 })
 
+// it return the college by collegeId
 const collegeById = asyncHandler(async(req, res) => {
     const { collegeId } = req.params
 
@@ -37,6 +43,7 @@ const collegeById = asyncHandler(async(req, res) => {
     )
 })
 
+// it return the college by name as query
 const collegeByName = asyncHandler(async(req, res) => {
     const { query } = req.query
 
