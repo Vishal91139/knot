@@ -2,36 +2,9 @@ import prisma from "../config/prisma.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { assertCollegeScopeOrSuperAdmin } from "../middlewares/role.middleware.js";
 import { trim, trimLower } from "../utils/sanitize.js";
 import bcrypt from "bcrypt";
-
-// super admin guard for platform-wide actions
-const assertSuperAdmin = (actor) => {
-  if (!actor || actor.role !== "super_admin") {
-    throw new ApiError(403, "Only super admin can perform this action");
-  }
-};
-
-// scope guard: super admin can act globally; college admin only within own college
-const assertCollegeScopeOrSuperAdmin = (actor, targetCollegeId) => {
-  if (!actor) {
-    throw new ApiError(401, "Unauthorized request");
-  }
-
-  if (actor.role === "super_admin") return;
-
-  if (actor.role !== "college_admin") {
-    throw new ApiError(403, "Only college admin or super admin can perform this action");
-  }
-
-  if (!targetCollegeId) {
-    throw new ApiError(400, "Target college id is required");
-  }
-
-  if (String(actor.college_id) !== String(targetCollegeId)) {
-    throw new ApiError(403, "You can only manage resources for your own college");
-  }
-};
 
 // submit college-admin request to create acc(does not create acc until super-admin passes)
 const submitCollegeAdminRequest = asyncHandler(async (req, res) => {
@@ -149,8 +122,6 @@ const listCollegeAdminRequests = asyncHandler(async (req, res) => {
 
 // approve pending request and create real college-admin user
 const approveCollegeAdminRequest = asyncHandler(async (req, res) => {
-  assertSuperAdmin(req.user);
-
   const requestId = trim(req.params.requestId);
   const initialPassword = typeof req.body.initialPassword === "string" ? req.body.initialPassword : "";
 
@@ -235,8 +206,6 @@ const approveCollegeAdminRequest = asyncHandler(async (req, res) => {
 
 // reject pending request for college-admin acc creation(by super admin)
 const rejectCollegeAdminRequest = asyncHandler(async (req, res) => {
-  assertSuperAdmin(req.user);
-
   const requestId = trim(req.params.requestId);
   const rejectionReason = trim(req.body.rejectionReason);
 
@@ -343,8 +312,6 @@ const setUserActiveState = asyncHandler(async (req, res) => {
 
 // assign role to the user - accesed only by super admin
 const assignRole = asyncHandler(async (req, res) => {
-  assertSuperAdmin(req.user);
-
   const targetUserId = trim(req.params.userId);
   const role = trimLower(req.body.role);
   const collegeId = trim(req.body.collegeId) || null;
