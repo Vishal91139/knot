@@ -68,3 +68,9 @@ const collegeByName = asyncHandler(async(req, res) => {
         new ApiResponse(200, colleges, "college found")
     )
 })
+
+export {
+    getAllCollege,
+    collegeById,
+    collegeByName,
+}

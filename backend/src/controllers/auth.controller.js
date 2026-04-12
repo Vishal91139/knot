@@ -2,10 +2,133 @@ import prisma from "../config/prisma.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { isInRange, trim, trimLower } from "../utils/sanitize.js";
 import { generateAccessToken, generateRefreshToken, hashToken, getRefreshExpiryDate } from "../utils/tokens.js";
 import { refreshCookieOptions } from "../utils/cookies.js";
 import bcrypt from "bcrypt";
-import { trimLower } from "../utils/sanitize.js";
+
+// it will extract the domain name of college email
+const getDomainFromEmail = (value) => {
+  if (!value) return null
+  const atIndex = value.lastIndexOf("@")
+  if (atIndex === -1 || atIndex === value.length - 1) return null
+  return value.slice(atIndex + 1).toLowerCase()
+}
+
+// it will register the student and faculty on the platform
+const registerUser = asyncHandler(async (req, res) => {
+  const fullName = trim(req.body.fullName)
+  const email = trimLower(req.body.email)
+  const collegeEmail = trimLower(req.body.collegeEmail)
+  const password = typeof req.body.password === "string" ? req.body.password : ""
+  const requestedRole = trimLower(req.body.role || "student")
+  const collegeId = trim(req.body.collegeId)
+  const rollNumber = trim(req.body.rollNumber)
+  const branch = trim(req.body.branch)
+  const yearOfStudy = req.body.yearOfStudy
+
+  const allowedPublicRoles = new Set(["student", "faculty"])
+
+  // Neccessary inputs are required
+  if (!fullName || !email || !password || !collegeId) {
+    throw new ApiError(400, "Necessary fields are required")
+  }
+
+  if (!allowedPublicRoles.has(requestedRole)) {
+    throw new ApiError(403, "Public signup allows only student or faculty")
+  }
+
+  // if role is student then student fields are neccessary
+  if (requestedRole === "student") {
+    if (!rollNumber || !branch || !isInRange(yearOfStudy, 1, 8)) {
+      throw new ApiError(400, "Student must have valid rollNumber, branch, yearOfStudy")
+    }
+  }
+
+  if (requestedRole === "faculty" && !collegeEmail) {
+    throw new ApiError(400, "collegeEmail is required for faculty signup")
+  }
+
+  // checking if given college is present and active in our db
+  const college = await prisma.college.findFirst({
+    where: {
+      id: collegeId,
+      is_active: true,
+    }
+  })
+  if (!college) {
+    throw new ApiError(404, "College not found")
+  }
+
+  // checking if college email is valid and matches to the college
+  if (collegeEmail) {
+    const emailDomain = getDomainFromEmail(collegeEmail)
+    if (!emailDomain) {
+      throw new ApiError(400, "Invalid collegeEmail format")
+    }
+
+    if (emailDomain !== String(college.email_domain).toLowerCase()) {
+      throw new ApiError(400, "collegeEmail domain must match college email domain")
+    }
+  }
+
+  // checking if the user already registered on our platform (By personal email or student email)
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  });
+  if (existingUser) {
+    throw new ApiError(409, "User already exists")
+  }
+
+  // if user uploads avatar Image then upload on cloudinary
+  const avatarLocalPath = req.files?.avatar?.[0]?.path
+  let avatarUrl = null;
+
+  if (avatarLocalPath) {
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (!avatar) throw new ApiError(400, "Cloudinary upload failed");
+    avatarUrl = avatar.url;
+  }
+
+  // passwordHashing
+  const hashedPassword = await bcrypt.hash(password, 10)
+
+  // creating user and returning
+  const user = await prisma.user.create({
+    data: {
+      full_name: fullName,
+      email,
+      college_email: collegeEmail || null,
+      password_hash: hashedPassword,
+      role: requestedRole,
+      college_id: collegeId,
+      roll_number: requestedRole === "student" ? rollNumber : null,
+      branch: requestedRole === "student" ? branch : null,
+      year_of_study: requestedRole === "student" ? Number(yearOfStudy) : null,
+      avatar_url: avatarUrl,
+      is_verified: false,
+      verification_method: null,
+      is_active: true
+    },
+    select: {
+      full_name: true,
+      email: true,
+      college_email: true,
+      role: true,
+      college_id: true,
+      roll_number: true,
+      branch: true,
+      year_of_study: true,
+      is_active: true,
+      is_verified: true
+    }
+  })
+
+  return res.status(201).json(
+    new ApiResponse(201, user, "User registered successfully")
+  )
+})
 
 // This function logins the user and return email,name,id,role
 const loginUser = asyncHandler(async(req, res) => {
@@ -130,7 +253,7 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 })
 
 // This function change the users password by oldPassword
-const changeCurrentPassword = asyncHandler(async(req, res) => {
+const resetPassword = asyncHandler(async(req, res) => {
   const oldPassword = typeof req.body.oldPassword === "string" ? req.body.oldPassword : ""
   const newPassword = typeof req.body.newPassword === "string" ? req.body.newPassword : ""
 
@@ -169,17 +292,14 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
     .json(new ApiResponse(200, {}, "Password changed successfully"))
 })
 
-// It returns the current user
-const getCurrentUser = asyncHandler(async(req, res) => {
-  return res
-    .status(200)
-    .json(new ApiResponse(200, req.user, "Current user fetched successfully"))
-})
+const forgetPassword = asyncHandler(async(req, res) => {})
+
+const verifyEmail = asyncHandler(async(req, res) => {})
 
 export {
+  registerUser,
   loginUser,
   logout,
   refreshAccessToken,
-  changeCurrentPassword,
-  getCurrentUser
+  resetPassword,
 }

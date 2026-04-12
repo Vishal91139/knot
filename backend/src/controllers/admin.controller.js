@@ -316,9 +316,9 @@ const assignRole = asyncHandler(async (req, res) => {
   const role = trimLower(req.body.role);
   const collegeId = trim(req.body.collegeId) || null;
 
-  const allowedRoles = new Set(["student", "organizer", "college_admin"]);
+  const allowedRoles = new Set(["student", "organizer", "faculty", "college_admin"]);
   if (!allowedRoles.has(role)) {
-    throw new ApiError(400, "Invalid role. Allowed: student, organizer, college_admin");
+    throw new ApiError(400, "Invalid role. Allowed: student, organizer, faculty, college_admin");
   }
 
   if (!targetUserId) {

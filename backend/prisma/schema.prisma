@@ -21,6 +21,7 @@ datasource db {
 enum UserRole {
   student
   organizer
+  faculty
   college_admin
   super_admin
 
@@ -30,9 +31,6 @@ enum UserRole {
 enum OrganizerType {
   club
   department
-  faculty
-  admin
-
   @@map("organizer_type")
 }
 

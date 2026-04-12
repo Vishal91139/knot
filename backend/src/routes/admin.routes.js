@@ -12,7 +12,7 @@ import { requireCollegeAdminOrSuperAdmin, requireSuperAdmin } from "../middlewar
 
 const router = Router();
 
-router.post("/college-admin-requests", submitCollegeAdminRequest);
+router.route("/college-admin-requests").post(submitCollegeAdminRequest)
 
 router.get(
 	"/college-admin-requests",

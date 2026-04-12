@@ -26,20 +26,33 @@ export const verifyJWT = asyncHandler(async(req, res, next) => {
                 id: true,
                 full_name: true,
                 email: true,
+                college_email: true,
                 role: true,
-                is_active: true,
                 college_id: true,
+                roll_number: true,
+                branch: true,
+                year_of_study: true,
+                avatar_url: true,
+                is_verified: true,
+                is_active: true,
             },
         });
 
-        if (!user || !user.is_active) {
+        if (!user) {
            throw new ApiError(401, "Invalid access token");
+        }
+
+        if (!user.is_active) {
+           throw new ApiError(403, "Account is inactive");
         }
     
         req.user = user;
         next()
 
     } catch (error) {
+        if (error instanceof ApiError) {
+            throw error
+        }
         throw new ApiError(401, error?.message || "Invalid access Token")
     }
 })

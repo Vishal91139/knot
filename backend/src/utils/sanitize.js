@@ -2,7 +2,7 @@ import { ApiError } from "./ApiError.js";
 
 // Removes spaces only from string
 export const trim = (value) => {
-    return typeof value === "string" ? value.trim() : "";
+    return typeof value === "string" ? value.trim() : null;
 };
 
 // Removes spaces and convert to lowercase
