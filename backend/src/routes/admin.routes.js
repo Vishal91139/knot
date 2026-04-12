@@ -17,35 +17,35 @@ router.route("/college-admin-requests").post(submitCollegeAdminRequest)
 router.get(
 	"/college-admin-requests",
 	verifyJWT,
-	requireCollegeAdminOrSuperAdmin(),
+	requireCollegeAdminOrSuperAdmin,
 	listCollegeAdminRequests
 );
 
 router.post(
 	"/college-admin-requests/:requestId/approve",
 	verifyJWT,
-	requireSuperAdmin(),
+	requireSuperAdmin,
 	approveCollegeAdminRequest
 );
 
 router.post(
 	"/college-admin-requests/:requestId/reject",
 	verifyJWT,
-	requireSuperAdmin(),
+	requireSuperAdmin,
 	rejectCollegeAdminRequest
 );
 
 router.patch(
 	"/users/:userId/active-state",
 	verifyJWT,
-	requireCollegeAdminOrSuperAdmin(),
+	requireCollegeAdminOrSuperAdmin,
 	setUserActiveState
 );
 
 router.patch(
 	"/users/:userId/role",
 	verifyJWT,
-	requireSuperAdmin(),
+	requireSuperAdmin,
 	assignRole
 );
 
