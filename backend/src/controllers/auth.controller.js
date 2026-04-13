@@ -23,7 +23,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const collegeEmail = trimLower(req.body.collegeEmail)
   const password = typeof req.body.password === "string" ? req.body.password : ""
   const requestedRole = trimLower(req.body.role || "student")
-  const collegeId = trim(req.body.collegeId)
+  const collegeId = trim(req.body.collegeId) || null
   const rollNumber = trim(req.body.rollNumber)
   const branch = trim(req.body.branch)
   const yearOfStudy = req.body.yearOfStudy
@@ -31,12 +31,16 @@ const registerUser = asyncHandler(async (req, res) => {
   const allowedPublicRoles = new Set(["student", "faculty"])
 
   // Neccessary inputs are required
-  if (!fullName || !email || !password || !collegeId) {
+  if (!fullName || !email || !password) {
     throw new ApiError(400, "Necessary fields are required")
   }
 
   if (!allowedPublicRoles.has(requestedRole)) {
     throw new ApiError(403, "Public signup allows only student or faculty")
+  }
+
+  if (requestedRole === "faculty" && !collegeId) {
+    throw new ApiError(400, "collegeId is required for faculty signup")
   }
 
   // if role is student then student fields are neccessary
@@ -50,19 +54,26 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "collegeEmail is required for faculty signup")
   }
 
+  if (collegeEmail && !collegeId) {
+    throw new ApiError(400, "collegeId is required when providing collegeEmail")
+  }
+
   // checking if given college is present and active in our db
-  const college = await prisma.college.findFirst({
-    where: {
-      id: collegeId,
-      is_active: true,
+  let college = null
+  if (collegeId) {
+    college = await prisma.college.findFirst({
+      where: {
+        id: collegeId,
+        is_active: true,
+      }
+    })
+    if (!college) {
+      throw new ApiError(404, "College not found")
     }
-  })
-  if (!college) {
-    throw new ApiError(404, "College not found")
   }
 
   // checking if college email is valid and matches to the college
-  if (collegeEmail) {
+  if (collegeEmail && college) {
     const emailDomain = getDomainFromEmail(collegeEmail)
     if (!emailDomain) {
       throw new ApiError(400, "Invalid collegeEmail format")

@@ -189,7 +189,6 @@ model College {
   organizers            Organizer[]
   events                Event[]
   id_card_verifications IdCardVerification[]
-  admin_requests        CollegeAdminRequest[]
 
   @@map("colleges")
 }
@@ -670,25 +669,29 @@ model StudentBadge {
 // ============================================================
 
 model CollegeAdminRequest {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  full_name          String             @db.VarChar(150)
-  email              String             @db.VarChar(255)
-  college_id         String             @db.Uuid
-  phone              String?            @db.VarChar(20)
-  designation        String?            @db.VarChar(120)
-  reason             String?
-  status             AdminRequestStatus @default(pending)
-  rejection_reason   String?
-  reviewed_by        String?            @db.Uuid
-  reviewed_at        DateTime?
-  created_at         DateTime           @default(now())
-  updated_at         DateTime           @default(now()) @updatedAt
+  id                            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name                     String             @db.VarChar(150)
+  email                         String             @db.VarChar(255)
+  requested_college_name        String?            @db.VarChar(200)
+  requested_college_short_name  String?            @db.VarChar(50)
+  requested_college_email_domain String?            @db.VarChar(100)
+  requested_college_city        String?            @db.VarChar(100)
+  requested_college_state       String?            @db.VarChar(100)
+  requested_college_website_url String?
+  requested_college_logo_url    String?
+  phone                         String?            @db.VarChar(20)
+  designation                   String?            @db.VarChar(120)
+  reason                        String?
+  status                        AdminRequestStatus @default(pending)
+  rejection_reason              String?
+  reviewed_by                   String?            @db.Uuid
+  reviewed_at                   DateTime?
+  created_at                    DateTime           @default(now())
+  updated_at                    DateTime           @default(now()) @updatedAt
 
-  college            College            @relation(fields: [college_id], references: [id], onDelete: Cascade)
-  reviewer           User?              @relation("ReviewedAdminRequests", fields: [reviewed_by], references: [id], onDelete: SetNull)
+  reviewer User?    @relation("ReviewedAdminRequests", fields: [reviewed_by], references: [id], onDelete: SetNull)
 
-  @@unique([email, college_id, status])
   @@index([status])
-  @@index([college_id])
+  @@index([requested_college_email_domain])
   @@map("college_admin_requests")
 }

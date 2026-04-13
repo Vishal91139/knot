@@ -10,22 +10,32 @@ import bcrypt from "bcrypt";
 const submitCollegeAdminRequest = asyncHandler(async (req, res) => {
   const fullName = trim(req.body.fullName);
   const email = trimLower(req.body.email);
-  const collegeId = trim(req.body.collegeId);
+  const collegeName = trim(req.body.collegeName);
+  const collegeShortName = trim(req.body.collegeShortName) || null;
+  const collegeEmailDomain = trimLower(req.body.collegeEmailDomain);
+  const collegeCity = trim(req.body.collegeCity) || null;
+  const collegeState = trim(req.body.collegeState) || null;
+  const collegeWebsiteUrl = trim(req.body.collegeWebsiteUrl) || null;
+  const collegeLogoUrl = trim(req.body.collegeLogoUrl) || null;
   const phone = trim(req.body.phone) || null;
   const designation = trim(req.body.designation) || null;
   const reason = trim(req.body.reason) || null;
 
-  if (!fullName || !email || !collegeId) {
-    throw new ApiError(400, "fullName, email, and collegeId are required");
+  if (!fullName || !email) {
+    throw new ApiError(400, "fullName and email are required");
   }
 
-  const college = await prisma.college.findFirst({
-    where: { id: collegeId, is_active: true },
-    select: { id: true, name: true, is_active: true },
+  if (!collegeName || !collegeEmailDomain) {
+    throw new ApiError(400, "collegeName and collegeEmailDomain are required");
+  }
+
+  const existingCollege = await prisma.college.findUnique({
+    where: { email_domain: collegeEmailDomain },
+    select: { id: true },
   });
 
-  if (!college) {
-    throw new ApiError(404, "College not found or inactive");
+  if (existingCollege) {
+    throw new ApiError(409, "A college already exists with this email domain");
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -40,21 +50,26 @@ const submitCollegeAdminRequest = asyncHandler(async (req, res) => {
   const existingPending = await prisma.collegeAdminRequest.findFirst({
     where: {
       email,
-      college_id: collegeId,
       status: "pending",
     },
     select: { id: true },
   });
 
   if (existingPending) {
-    throw new ApiError(409, "A pending request already exists for this email and college");
+    throw new ApiError(409, "A pending request already exists for this email");
   }
 
   const request = await prisma.collegeAdminRequest.create({
     data: {
       full_name: fullName,
       email,
-      college_id: collegeId,
+      requested_college_name: collegeName,
+      requested_college_short_name: collegeShortName,
+      requested_college_email_domain: collegeEmailDomain,
+      requested_college_city: collegeCity,
+      requested_college_state: collegeState,
+      requested_college_website_url: collegeWebsiteUrl,
+      requested_college_logo_url: collegeLogoUrl,
       phone,
       designation,
       reason,
@@ -75,7 +90,7 @@ const listCollegeAdminRequests = asyncHandler(async (req, res) => {
   }
 
   const status = trimLower(req.query.status);
-  const collegeId = trim(req.query.collegeId);
+  const collegeEmailDomain = trimLower(req.query.collegeEmailDomain);
   const page = Math.max(Number(req.query.page) || 1, 1);
   const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
 
@@ -90,9 +105,9 @@ const listCollegeAdminRequests = asyncHandler(async (req, res) => {
   }
 
   if (req.user.role === "college_admin") {
-    where.college_id = req.user.college_id;
+    where.email = req.user.email;
   } else if (req.user.role === "super_admin") {
-    if (collegeId) where.college_id = collegeId;
+    if (collegeEmailDomain) where.requested_college_email_domain = collegeEmailDomain;
   } else {
     throw new ApiError(403, "Only college admin or super admin can view requests");
   }
@@ -157,13 +172,42 @@ const approveCollegeAdminRequest = asyncHandler(async (req, res) => {
   const passwordHash = await bcrypt.hash(initialPassword, 10);
 
   const result = await prisma.$transaction(async (tx) => {
+    if (!request.requested_college_name || !request.requested_college_email_domain) {
+      throw new ApiError(400, "Requested college details are incomplete");
+    }
+
+    const existingCollege = await tx.college.findUnique({
+      where: { email_domain: request.requested_college_email_domain },
+      select: { id: true },
+    });
+
+    if (existingCollege) {
+      throw new ApiError(409, "A college already exists with this email domain");
+    }
+
+    const createdCollege = await tx.college.create({
+      data: {
+        name: request.requested_college_name,
+        short_name: request.requested_college_short_name,
+        email_domain: request.requested_college_email_domain,
+        city: request.requested_college_city,
+        state: request.requested_college_state,
+        website_url: request.requested_college_website_url,
+        logo_url: request.requested_college_logo_url,
+        is_active: true,
+      },
+      select: { id: true },
+    });
+
+    const collegeId = createdCollege.id;
+
     const createdUser = await tx.user.create({
       data: {
         full_name: request.full_name,
         email: request.email,
         password_hash: passwordHash,
         role: "college_admin",
-        college_id: request.college_id,
+        college_id: collegeId,
         is_verified: true,
         verification_method: "manual",
         is_active: true,

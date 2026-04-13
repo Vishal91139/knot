@@ -7,7 +7,8 @@ export const trim = (value) => {
 
 // Removes spaces and convert to lowercase
 export const trimLower = (value) => {
-    return trim(value).toLowerCase();
+    const normalized = trim(value);
+    return typeof normalized === "string" ? normalized.toLowerCase() : null;
 };
 
 // Parses only integer-like values and returns NaN for invalid inputs.
