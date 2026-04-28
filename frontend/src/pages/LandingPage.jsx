@@ -1,6 +1,7 @@
 import { useState } from "react"
 import CollegeModal from "../components/modals/CollegeModal"
 import AuthModal from "../components/modals/AuthModal"
+import { Link } from "react-router-dom"
 
 const TICKER = [
   "Hackathon", "Cultural Fest", "Workshop", "Sports Meet", "Quiz Night",
@@ -76,10 +77,12 @@ export default function LandingPage() {
           <a href="#about"  className="hover:text-[#E8E4DC] transition-colors">About</a>
           <a href="#join"   className="hover:text-[#E8E4DC] transition-colors">Get started</a>
         </div>
-        <button onClick={() => setModal("auth")}
-          className="text-sm font-semibold px-4 py-2 rounded-lg bg-[#F0A500] text-[#080D18] hover:bg-[#FFB820] transition-colors active:scale-95">
-          Sign in
-        </button>
+        <Link
+          className="text-sm font-semibold px-4 py-2 rounded-lg bg-[#F0A500] text-[#080D18] hover:bg-[#FFB820] transition-colors active:scale-95"
+          to={"/login"}
+        >
+          Login
+        </Link>
       </nav>
 
       {/* ── HERO ── */}

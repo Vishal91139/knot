@@ -40,7 +40,7 @@ const getAllCollege = asyncHandler(async(req, res) => {
         where.is_active = true;
     }
 
-    const [items, total] = await prisma.$transaction([
+    const [data, total] = await prisma.$transaction([
         prisma.college.findMany({
             where,
             skip: (page - 1) * limit,
@@ -52,7 +52,7 @@ const getAllCollege = asyncHandler(async(req, res) => {
 
     res.status(200).json(
         new ApiResponse(200, {
-            items,
+            data,
             pagination: {
                 page,
                 limit,

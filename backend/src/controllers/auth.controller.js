@@ -44,11 +44,11 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   // if role is student then student fields are neccessary
-  if (requestedRole === "student") {
-    if (!rollNumber || !branch || !isInRange(yearOfStudy, 1, 8)) {
-      throw new ApiError(400, "Student must have valid rollNumber, branch, yearOfStudy")
-    }
-  }
+  // if (requestedRole === "student") {
+  //   if (!rollNumber || !branch || !isInRange(yearOfStudy, 1, 8)) {
+  //     throw new ApiError(400, "Student must have valid rollNumber, branch, yearOfStudy")
+  //   }
+  // }
 
   if (requestedRole === "faculty" && !collegeEmail) {
     throw new ApiError(400, "collegeEmail is required for faculty signup")
@@ -181,6 +181,7 @@ const loginUser = asyncHandler(async(req, res) => {
 
   res
     .cookie("refreshToken", rawRefreshToken, refreshCookieOptions)
+    .cookie("accessToken", accessToken, refreshCookieOptions)
     .json(
       new ApiResponse(
         200,
