@@ -244,6 +244,27 @@ const organizerByName = asyncHandler(async(req, res) => {
     );
 });
 
+const getMyOrganizer = asyncHandler(async (req, res) => {
+    if (!req.user) {
+        throw new ApiError(401, "Unauthorized request");
+    }
+
+    const organizer = await prisma.organizer.findFirst({
+        where: {
+            user_id: req.user.id,
+            is_active: true,
+        },
+    });
+
+    if (!organizer) {
+        throw new ApiError(404, "Organizer account not found");
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, organizer, "Organizer fetched successfully")
+    );
+});
+
 const updateOrganizer = asyncHandler(async (req, res) => {
     if (!req.user) {
         throw new ApiError(401, "Unauthorized request");
@@ -392,6 +413,7 @@ const setOrganizerActiveState = asyncHandler(async (req, res) => {
 });
 
 export {
+    getMyOrganizer,
     createOrganizerAcc,
     listAllOrganizer,
     organizerById,

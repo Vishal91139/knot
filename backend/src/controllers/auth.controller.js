@@ -160,6 +160,17 @@ const loginUser = asyncHandler(async(req, res) => {
   const match = await bcrypt.compare(password, user.password_hash)
   if (!match) throw new ApiError(401, "Invalid credentials")
 
+  const college = user.college_id
+    ? await prisma.college.findUnique({
+        where: { id: user.college_id },
+        select: {
+          id: true,
+          name: true,
+          short_name: true,
+        },
+      })
+    : null
+
   await prisma.user.update({
     where: { id: user.id },
     data: { last_login: new Date() }
@@ -180,7 +191,6 @@ const loginUser = asyncHandler(async(req, res) => {
   })
 
   res
-    .cookie("refreshToken", rawRefreshToken, refreshCookieOptions)
     .cookie("accessToken", accessToken, refreshCookieOptions)
     .json(
       new ApiResponse(
@@ -191,7 +201,9 @@ const loginUser = asyncHandler(async(req, res) => {
             id: user.id,
             email: user.email,
             full_name: user.full_name,
-            role: user.role
+            role: user.role,
+            college_id: user.college_id,
+            college_name: college?.short_name || college?.name || null,
           },
         },
         "User logged in successfully"
@@ -237,6 +249,16 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 
   const newRawToken = generateRefreshToken()
   const newHash = hashToken(newRawToken)
+  const college = existing.user.college_id
+    ? await prisma.college.findUnique({
+        where: { id: existing.user.college_id },
+        select: {
+          id: true,
+          name: true,
+          short_name: true,
+        },
+      })
+    : null
 
   await prisma.$transaction([
     prisma.refreshToken.update({
@@ -261,7 +283,23 @@ const refreshAccessToken = asyncHandler(async(req, res) => {
 
   res
     .cookie("refreshToken", newRawToken, refreshCookieOptions)
-    .json(new ApiResponse(200, { accessToken }, "Access token refreshed successfully"))
+    .json(
+      new ApiResponse(
+        200,
+        {
+          accessToken,
+          user: {
+            id: existing.user.id,
+            email: existing.user.email,
+            full_name: existing.user.full_name,
+            role: existing.user.role,
+            college_id: existing.user.college_id,
+            college_name: college?.short_name || college?.name || null,
+          },
+        },
+        "Access token refreshed successfully"
+      )
+    )
 })
 
 // This function change the users password by oldPassword

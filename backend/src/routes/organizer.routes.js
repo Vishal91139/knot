@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
 	createOrganizerAcc,
+	getMyOrganizer,
 	listAllOrganizer,
 	organizerById,
 	organizerByName,
@@ -11,6 +12,8 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { requireCollegeAdminOrSuperAdmin } from "../middlewares/role.middleware.js";
 
 const router = Router();
+
+router.route("/me").get(verifyJWT, getMyOrganizer);
 
 router
 	.route("/")

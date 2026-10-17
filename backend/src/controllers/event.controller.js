@@ -104,7 +104,7 @@ const assertCreateAccess = async (req, collegeId, organizerId) => {
         return;
     }
 
-    if (req.user.role === "faculty") {
+    if (req.user.role === "faculty" || req.user.role === "organizer") {
         const activeOrganizer = await getActiveOrganizerForUser(req.user.id);
 
         if (!activeOrganizer) {
@@ -139,7 +139,7 @@ const assertManageAccess = async (req, event) => {
         return;
     }
 
-    if (req.user.role === "faculty") {
+    if (req.user.role === "faculty" || req.user.role === "organizer") {
         const activeOrganizer = await getActiveOrganizerForUser(req.user.id);
 
         if (!activeOrganizer) {
@@ -198,6 +198,12 @@ const getAllEvents = asyncHandler(async (req, res) => {
             take: limit,
             orderBy: { created_at: "desc" },
             include: {
+                _count: {
+                    select: {
+                        registrations: true,
+                        teams: true,
+                    },
+                },
                 organizer: {
                     select: {
                         id: true,

@@ -3,6 +3,7 @@
 :root{
   --cream:#F4EEE3;
   --cream-dark:#EAE1D0;
+  --cream-medium: #EFE8D9;
   --ink:#141414;
   --ink-60:rgba(20,20,20,.6);
   --ink-30:rgba(20,20,20,.3);
@@ -10,11 +11,125 @@
   --ink-06:rgba(20,20,20,.06);
   --red:#E8390C;
   --green:#1B4D3E;
+  --purple: #6B4EFF;
   --violet:#6B4EFF;
   --amber:#D88A1E;
   --serif:'Cormorant Garamond',Georgia,serif;
   --sans:'Instrument Sans',system-ui,sans-serif;
   --mono:'JetBrains Mono',monospace;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out:cubic-bezier(.16,1,.3,1);
   --section-x:48px;
+
 }
+
+body[data-theme='dark']{
+  --cream:#101010;
+  --cream-dark:#191919;
+  --ink:#F4EEE3;
+  --ink-60:rgba(244,238,227,.62);
+  --ink-30:rgba(244,238,227,.3);
+  --ink-12:rgba(244,238,227,.12);
+  --ink-06:rgba(244,238,227,.06);
+}
+
+body[data-theme='dark']{background:radial-gradient(circle at 12% 12%, rgba(232,57,12,.12), transparent 26%), linear-gradient(180deg,#0c0c0c 0%, #0f0f10 100%)}
+body[data-theme='dark'] .logo-sq,
+body[data-theme='dark'] .footer-logo-mark,
+body[data-theme='dark'] .preview-avatar{background:var(--cream);}
+body[data-theme='dark'] .logo-sq svg circle,
+body[data-theme='dark'] .logo-sq svg line,
+body[data-theme='dark'] .footer-logo-mark svg circle,
+body[data-theme='dark'] .footer-logo-mark svg line,
+body[data-theme='dark'] .preview-avatar{fill:var(--ink);stroke:var(--ink)}
+body[data-theme='dark'] .hero-right,
+body[data-theme='dark'] .showcard,
+body[data-theme='dark'] .spotlight-card,
+body[data-theme='dark'] .quote-card,
+body[data-theme='dark'] .rm-card,
+body[data-theme='dark'] .command-card,
+body[data-theme='dark'] .faq-item,
+body[data-theme='dark'] .eposter,
+body[data-theme='dark'] .service,
+body[data-theme='dark'] .project,
+body[data-theme='dark'] .role-cell,
+body[data-theme='dark'] .panel-card,
+body[data-theme='dark'] .stat-cell{
+  background:rgba(255,255,255,.02);
+}
+body[data-theme='dark'] nav{background:rgba(16,16,16,.88)}
+body[data-theme='dark'] .hero-main,
+body[data-theme='dark'] .hero-right,
+body[data-theme='dark'] .showcase-section,
+body[data-theme='dark'] .spotlight-section,
+body[data-theme='dark'] .roadmap-section,
+body[data-theme='dark'] .social-proof,
+body[data-theme='dark'] .faq-section,
+body[data-theme='dark'] .command-section{color:var(--ink)}
+body[data-theme='dark'] .btn-ink{background:var(--cream);color:var(--ink)}
+body[data-theme='dark'] .btn-text{color:var(--ink-60)}
+body[data-theme='dark'] .btn-text:hover{color:var(--ink)}
+body[data-theme='dark'] .nav-theme,
+body[data-theme='dark'] .filter-chip,
+body[data-theme='dark'] .spotlight-card,
+body[data-theme='dark'] .showcard,
+body[data-theme='dark'] .quote-card,
+body[data-theme='dark'] .rm-card,
+body[data-theme='dark'] .command-card,
+body[data-theme='dark'] .faq-item,
+body[data-theme='dark'] .service,
+body[data-theme='dark'] .project,
+body[data-theme='dark'] .role-cell,
+body[data-theme='dark'] .panel-card,
+body[data-theme='dark'] .stat-cell,
+body[data-theme='dark'] .eposter,
+body[data-theme='dark'] .fcard-body,
+body[data-theme='dark'] .modal-box{border-color:rgba(244,238,227,.1)}
+body[data-theme='dark'] .showcard.big{
+  background:linear-gradient(145deg,#111,#221913 60%,#101010);
+  box-shadow:0 24px 60px rgba(0,0,0,.28)
+}
+body[data-theme='dark'] .showcard.big .showcard-tag,
+body[data-theme='dark'] .showcard.big .showcard-copy,
+body[data-theme='dark'] .showcard.big .mini-stat{color:rgba(244,238,227,.8)}
+body[data-theme='dark'] .stats-bar{background:linear-gradient(180deg,rgba(16,16,16,.86),rgba(16,16,16,1))}
+body[data-theme='dark'] .stat-num,
+body[data-theme='dark'] .section-title,
+body[data-theme='dark'] .showcase-title,
+body[data-theme='dark'] .spotlight-title,
+body[data-theme='dark'] .roadmap-title,
+body[data-theme='dark'] .proof-heading,
+body[data-theme='dark'] .faq-title,
+body[data-theme='dark'] .command-title,
+body[data-theme='dark'] .about-heading,
+body[data-theme='dark'] .events-heading,
+body[data-theme='dark'] .j-heading,
+body[data-theme='dark'] .role-title,
+body[data-theme='dark'] .f-title,
+body[data-theme='dark'] .cc-title,
+body[data-theme='dark'] .quote-text,
+body[data-theme='dark'] .m-title{color:var(--cream)}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  background:var(--cream);
+  color:var(--ink);
+  font-family:var(--sans);
+  overflow-x:hidden;
+  line-height:1.5;
+}
+
+/* Shared utilities used across dashboards */
+.custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: rgba(20,20,20,0.12); border-radius: 4px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(20,20,20,0.22); }
+
+.nav-active-line {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 2px; height: 16px; border-radius: 2px; background: var(--red);
+}
+

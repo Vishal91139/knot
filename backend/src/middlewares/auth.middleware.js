@@ -35,6 +35,13 @@ export const verifyJWT = asyncHandler(async(req, res, next) => {
                 avatar_url: true,
                 is_verified: true,
                 is_active: true,
+                college: {
+                    select: {
+                        id: true,
+                        name: true,
+                        short_name: true,
+                    },
+                },
             },
         });
 
@@ -45,8 +52,13 @@ export const verifyJWT = asyncHandler(async(req, res, next) => {
         if (!user.is_active) {
            throw new ApiError(403, "Account is inactive");
         }
-    
-        req.user = user;
+
+        req.user = {
+            ...user,
+            college_name: user.college?.short_name || user.college?.name || null,
+        };
+
+        delete req.user.college;
         next()
 
     } catch (error) {

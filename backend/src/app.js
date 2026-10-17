@@ -22,6 +22,11 @@ app.use(express.urlencoded({ extended: true, limit: '16kb' }));
 app.use(express.static('public'));
 app.use(cookieParser());
 
+app.get("/api/v1/", async ()=> {
+    const hashedPassword = await bcrypt.hash("admin", 10);
+    console.log(hashedPassword)
+})
+
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/colleges', collegeRoutes);
